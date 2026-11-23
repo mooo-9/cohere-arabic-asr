@@ -1,14 +1,15 @@
 """Downloads the Cohere Transcribe Arabic Q8 model (2.41 GB, Apache-2.0) into models\\.
 
-The model is stored in this repository's GitHub release as 2 parts (GitHub allows at most
-2 GB per file). They are downloaded straight into one file, checked against the SHA-256
-below, and renamed when complete. If GitHub is unavailable it continues from the model's
-official Hugging Face page instead (same bytes, same checksum).
+Source: the model's official GGUF page on Hugging Face
+  https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf
+The file is checked against the SHA-256 below before it is used.
+
+Already have the model? Put the .gguf file in models\\ (any name), or set COHERE_GGUF to its
+full path, and nothing is downloaded. A copy downloaded by the Handy app is found automatically.
 
 Safe to run again: it skips a finished download and resumes an interrupted one.
-  python download_model.py          GitHub release, Hugging Face as fallback
-  python download_model.py --hf     Hugging Face only
 """
+import glob
 import hashlib
 import os
 import sys
@@ -19,26 +20,12 @@ import urllib.request
 NAME = "cohere-transcribe-arabic-07-2026-Q8_0.gguf"
 SIZE = 2410655136
 SHA256 = "910de5c9c57f9fd8a280e1701f9cd96f63768878c1ca9e4ecf23638a5e0fef16"
-GH = "https://github.com/mooo-9/cohere-arabic-asr/releases/download/model-v1/"
-PARTS = [(GH + NAME + ".001", 1205327568), (GH + NAME + ".002", 1205327568)]
-HF = "https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf/resolve/main/" + NAME
+URL = "https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf/resolve/main/" + NAME
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DST = os.path.join(HERE, "models", NAME)
 PART = DST + ".part"
 CHUNK = 1 << 20
-
-
-def source(have: int, use_hf: bool):
-    """URL to fetch next, the offset inside it, and how many bytes that source covers from there."""
-    if use_hf:
-        return HF, have, SIZE - have
-    start = 0
-    for url, n in PARTS:
-        if have < start + n:
-            return url, have - start, start + n - have
-        start += n
-    raise ValueError("already complete")
 
 
 def sha256(path: str) -> str:
@@ -49,24 +36,36 @@ def sha256(path: str) -> str:
     return h.hexdigest()
 
 
+def existing_model():
+    """A model the user already has: COHERE_GGUF, any .gguf in models\\, or the copy the Handy app downloaded."""
+    env = os.environ.get("COHERE_GGUF")
+    if env and os.path.isfile(env):
+        return env
+    found = sorted(glob.glob(os.path.join(HERE, "models", "*Q8_0.gguf"))) + sorted(
+        glob.glob(os.path.join(HERE, "models", "*.gguf")))
+    found += glob.glob(os.path.expandvars(
+        r"%USERPROFILE%\.cache\huggingface\hub\models--handy-computer--cohere-transcribe-arabic-07-2026-gguf"
+        r"\snapshots\*\*Q8_0.gguf"))
+    return next((f for f in found if os.path.getsize(f) > 100_000_000), None)
+
+
 def main() -> int:
-    if os.path.isfile(DST) and os.path.getsize(DST) == SIZE:
-        print(f"Model already downloaded: {DST}")
+    have_it = existing_model()
+    if have_it:
+        print(f"Using the model you already have: {have_it}")
         return 0
     os.makedirs(os.path.dirname(DST), exist_ok=True)
-    use_hf, fails = "--hf" in sys.argv, 0
-    print("  from " + ("Hugging Face" if use_hf else "GitHub release"))
+    fails = 0
     while True:
         have = os.path.getsize(PART) if os.path.exists(PART) else 0
         if have >= SIZE:
             break
-        url, offset, want = source(have, use_hf)
-        req = urllib.request.Request(url, headers={"Range": f"bytes={offset}-", "User-Agent": "cohere-arabic-asr-setup"})
+        req = urllib.request.Request(URL, headers={"Range": f"bytes={have}-", "User-Agent": "cohere-arabic-asr-setup"})
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
-                if offset and r.status != 206:
+                if have and r.status != 206:
                     raise RuntimeError("server does not support resuming")
-                last = time.time()
+                want, last = SIZE - have, time.time()
                 with open(PART, "ab") as f:
                     while want > 0:
                         buf = r.read(min(CHUNK, want))
@@ -81,10 +80,6 @@ def main() -> int:
                                   end="", flush=True)
             fails = 0
         except urllib.error.HTTPError as e:
-            if e.code in (403, 404) and not use_hf:
-                print(f"\n  GitHub copy not available (HTTP {e.code}); continuing from Hugging Face.")
-                use_hf = True
-                continue
             fails += 1
             print(f"\n  Download error (HTTP {e.code}), retrying in 5 s... [{fails}]")
         except Exception as e:  # network drop, timeout: resume from where it stopped

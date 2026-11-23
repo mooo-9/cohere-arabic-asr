@@ -1,1 +1,1 @@
-setup.cmd downloads cohere-transcribe-arabic-07-2026-Q8_0.gguf into this folder.
+Put your cohere-transcribe-arabic-07-2026-Q8_0.gguf here (any .gguf name works). If there is none, setup.cmd downloads it from Hugging Face.

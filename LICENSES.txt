@@ -5,8 +5,8 @@ Model: cohere-transcribe-arabic-07-2026 (Q8_0 GGUF)
   Original model by Cohere Labs: https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026
   GGUF conversion: https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf
   Licence: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-  Redistributed unmodified (split into 2 parts) in this repository's GitHub release;
-  setup.cmd downloads and rejoins them (Hugging Face is the fallback source).
+  Not included in this repository. Bring your own copy, or setup.cmd downloads it
+  from the Hugging Face page above.
 
 runtime\transcribe.dll, ggml*.dll
   transcribe.cpp (https://github.com/handy-computer/transcribe.cpp) and ggml

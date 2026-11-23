@@ -42,7 +42,8 @@ _LOCAL_RT = os.path.join(HERE, "runtime")
 HANDY_DIR = os.environ.get("HANDY_DIR") or (
     _LOCAL_RT if os.path.isfile(os.path.join(_LOCAL_RT, "transcribe.dll")) else os.path.expandvars(r"%LOCALAPPDATA%\Handy"))
 GGUF = os.environ.get("COHERE_GGUF") or next(iter(
-    glob.glob(os.path.join(HERE, "models", "*Q8_0.gguf"))
+    sorted(glob.glob(os.path.join(HERE, "models", "*Q8_0.gguf")))
+    + sorted(glob.glob(os.path.join(HERE, "models", "*.gguf")))
     + glob.glob(os.path.expandvars(
         r"%USERPROFILE%\.cache\huggingface\hub\models--handy-computer--cohere-transcribe-arabic-07-2026-gguf"
         r"\snapshots\*\*Q8_0.gguf"))), "")
